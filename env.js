@@ -1,7 +1,9 @@
-export const development = true
-export const debug = true
-export const host = 'http://localhost:3000'
-// export const host = 'http://rackham-801:3000'
+module.exports = {
+    development: true,
+    debug: true,
+    host: "http://localhost:3000"
+}
+// export const host = "http://rackham-801:3000"
 
 
 

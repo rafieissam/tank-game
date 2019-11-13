@@ -1,21 +1,21 @@
 let socket = io();
-let canvas = document.getElementById('game');
-let ctx = canvas.getContext('2d');
+let canvas = document.getElementById("game");
+let ctx = canvas.getContext("2d");
 let map
 
 // Canvas Size
-socket.on('canvasSize', function(data) {
+socket.on("canvasSize", function(data) {
     canvas.width = data.width;
     canvas.height = data.height;
 });
 
 // Map
-socket.on('tileMap', function(data) {
+socket.on("tileMap", function(data) {
     map = data
 });
 
 // Rendering Packs
-socket.on('pack', function(data) {
+socket.on("pack", function(data) {
     // ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle="#fff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -96,7 +96,7 @@ socket.on('pack', function(data) {
         ctx.restore();
         
         // Draw Collider
-        let drawCollider = false
+        let drawCollider = true
         if (drawCollider) {
             ctx.beginPath();
             ctx.lineWidth = "3";
@@ -151,7 +151,7 @@ socket.on('pack', function(data) {
             height
         );
         
-        let drawCollider = false
+        let drawCollider = true
         if (drawCollider) {
             ctx.beginPath();
             ctx.lineWidth = "3";
@@ -186,26 +186,26 @@ socket.on('pack', function(data) {
 
 // Emitting Key Presses
 let keys = {
-    37: 'left',
-    38: 'up',
-    39: 'right',
-    40: 'down',
-    32: 'space'
+    37: "left",
+    38: "up",
+    39: "right",
+    40: "down",
+    32: "space"
 };
 
 window.onkeydown = function(e) {
-    socket.emit('keyDown', keys[e.which]);
+    socket.emit("keyDown", keys[e.which]);
 }
 window.onkeyup = function(e) {
-    socket.emit('keyUp', keys[e.which]);
+    socket.emit("keyUp", keys[e.which]);
 }
 
 // Debugging
 function debug(msg) {
-    socket.emit('debugReq', msg);
+    socket.emit("debugReq", msg);
 }
 
-socket.on('debugRes', function(data) {
+socket.on("debugRes", function(data) {
     console.table(data);
     console.log(data);
 });

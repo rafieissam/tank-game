@@ -1,113 +1,106 @@
-import Global from '../global.js'
-import * as env from '../env.js'
+const Global = require("../global.js")
+const env = require("../env.js")
 
-let Bullet
-Bullet = function(id, tank_id, tank_dimensions, position, angle) {
-    let self = this
-    self.id = id
-    self.tank_id = tank_id
-    self.position = {
-        x: position.x,
-        y: position.y
-    }
-    self.speed = {
-        x: 0,
-        y: 0
-    }
-    self.dimensions = {
-        width: Bullet.image.width,
-        height: Bullet.image.height
-    }
-    self.tank_dimensions = {
-        width: tank_dimensions.width,
-        height: tank_dimensions.height
-    }
-    self.collider = {
-        tl: {
-            x: self.position.x - self.dimensions.width / 2,
-            y: self.position.y - self.dimensions.height / 2
-        },
-        tr: {
-            x: self.position.x + self.dimensions.width / 2,
-            y: self.position.y - self.dimensions.height / 2
-        },
-        bl: {
-            x: self.position.x - self.dimensions.width / 2,
-            y: self.position.y + self.dimensions.height / 2
-        },
-        br: {
-            x: self.position.x + self.dimensions.width / 2,
-            y: self.position.y + self.dimensions.height / 2
-        }
-    }
-    self.angle = angle
-    self.maxSpeed = 7
-    self.pack = {}
-    
-    self.position.x += (self.tank_dimensions.width / 2) * Math.cos((angle - 90) * Math.PI / 180)
-    self.position.y += (self.tank_dimensions.height / 2) * Math.sin((angle - 90) * Math.PI / 180)
-
-    self.speed.x = self.maxSpeed * Math.cos((angle - 90) * Math.PI / 180)
-    self.speed.y = self.maxSpeed * Math.sin((angle - 90) * Math.PI / 180)
-
-    self.update = function() {
-        self.updatePosition()
-        self.updateCollider()
-        self.updatePack()
-    }
-
-    self.updatePosition = function() {
-        self.position.x += self.speed.x
-        self.position.y += self.speed.y
-        if (
-            (self.position.x <= 0) ||
-            (self.position.x >= Global.canvas.width - self.dimensions.width) ||
-            (self.position.y <= 0) ||
-            (self.position.y >= Global.canvas.height - self.dimensions.height)
-        ) {
-            delete Global.OBSTACLE_LIST[self.id]
-            delete Global.BULLET_LIST[self.id]
-        }
-    }
-
-    self.updateCollider = function() {
-        self.collider = {
-            tl: {
-                x: self.position.x - self.dimensions.width / 2,
-                y: self.position.y - self.dimensions.height / 2
-            },
-            tr: {
-                x: self.position.x + self.dimensions.width / 2,
-                y: self.position.y - self.dimensions.height / 2
-            },
-            bl: {
-                x: self.position.x - self.dimensions.width / 2,
-                y: self.position.y + self.dimensions.height / 2
-            },
-            br: {
-                x: self.position.x + self.dimensions.width / 2,
-                y: self.position.y + self.dimensions.height / 2
-            }
-        }
-    }
-
-    self.updatePack = function() {
-        self.pack = {
-            id: self.id,
-            position: self.position,
-            dimensions: self.dimensions,
-            imageSrc: Bullet.image.src,
-            collider: self.collider
-        }
-    }
-
-    return self
+class Bullet {
+	static image = {
+		src: env.host + '/images/shot.png',
+		width: 10,
+		height: 10
+	}
+	constructor(id, tank_id, tank_dimensions, position, angle) {
+		this.id = id
+		this.tank_id = tank_id
+		this.position = {
+			x: position.x,
+			y: position.y
+		}
+		this.speed = {
+			x: 0,
+			y: 0
+		}
+		this.dimensions = {
+			width: Bullet.image.width,
+			height: Bullet.image.height
+		}
+		this.tank_dimensions = {
+			width: tank_dimensions.width,
+			height: tank_dimensions.height
+		}
+		this.collider = {
+			tl: {
+				x: this.position.x - this.dimensions.width / 2,
+				y: this.position.y - this.dimensions.height / 2
+			},
+			tr: {
+				x: this.position.x + this.dimensions.width / 2,
+				y: this.position.y - this.dimensions.height / 2
+			},
+			bl: {
+				x: this.position.x - this.dimensions.width / 2,
+				y: this.position.y + this.dimensions.height / 2
+			},
+			br: {
+				x: this.position.x + this.dimensions.width / 2,
+				y: this.position.y + this.dimensions.height / 2
+			}
+		}
+		this.angle = angle
+		this.maxSpeed = 7
+		this.pack = {}
+		
+		this.position.x += (this.tank_dimensions.width / 2) * Math.cos((angle - 90) * Math.PI / 180)
+		this.position.y += (this.tank_dimensions.height / 2) * Math.sin((angle - 90) * Math.PI / 180)
+		
+		this.speed.x = this.maxSpeed * Math.cos((angle - 90) * Math.PI / 180)
+		this.speed.y = this.maxSpeed * Math.sin((angle - 90) * Math.PI / 180)
+	}
+	update() {
+		this.updatePosition()
+		this.updateCollider()
+		this.updatePack()
+	}
+	updatePosition() {
+		this.position.x += this.speed.x
+		this.position.y += this.speed.y
+		if (
+			(this.position.x <= 0) ||
+			(this.position.x >= Global.canvas.width - this.dimensions.width) ||
+			(this.position.y <= 0) ||
+			(this.position.y >= Global.canvas.height - this.dimensions.height)
+		) {
+			delete Global.OBSTACLE_LIST[this.id]
+			delete Global.BULLET_LIST[this.id]
+		}
+	}
+	updateCollider() {
+		this.collider = {
+			tl: {
+				x: this.position.x - this.dimensions.width / 2,
+				y: this.position.y - this.dimensions.height / 2
+			},
+			tr: {
+				x: this.position.x + this.dimensions.width / 2,
+				y: this.position.y - this.dimensions.height / 2
+			},
+			bl: {
+				x: this.position.x - this.dimensions.width / 2,
+				y: this.position.y + this.dimensions.height / 2
+			},
+			br: {
+				x: this.position.x + this.dimensions.width / 2,
+				y: this.position.y + this.dimensions.height / 2
+			}
+		}
+	}
+	updatePack() {
+		this.pack = {
+			id: this.id,
+			position: this.position,
+			dimensions: this.dimensions,
+			imageSrc: Bullet.image.src,
+			collider: this.collider
+		}
+	}
 }
 
-Bullet.image = {
-    src: env.host + '/images/shot.png',
-    width: 10,
-    height: 10
-}
-
-export default Bullet
+module.exports = Bullet

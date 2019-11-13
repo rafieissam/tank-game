@@ -1,424 +1,407 @@
-import Global from '../global.js'
-import Bullet from './Bullet.js'
-import Tile from './Tile.js'
-import * as Funcs from './funcs.js'
-import * as env from '../env.js'
+const Global = require("../global.js")
+const Bullet = require("./Bullet.js")
+const Tile = require("./Tile.js")
+const Funcs = require("./funcs.js")
+const env = require("../env.js")
 
-let Tank
-Tank = function(id) {
-  let self = this
-  self.id = id
-  self.randImage = Funcs.randElement(Tank.images)
-  self.dimensions = {
-    width: self.randImage.width,
-    height: self.randImage.height
-  }
-  self.position = {
-    x: Global.canvas.width / 2 - self.dimensions.width / 2,
-    y: Global.canvas.height / 2 - self.dimensions.height / 2
-  }
-  self.collider = {
-    tl: {
-      x: self.position.x,
-      y: self.position.y
-    },
-    tr: {
-      x: self.position.x + self.dimensions.width,
-      y: self.position.y
-    },
-    bl: {
-      x: self.position.x,
-      y: self.position.y + self.dimensions.height
-    },
-    br: {
-      x: self.position.x + self.dimensions.width,
-      y: self.position.y + self.dimensions.height
-    }
-  }
-  self.imageOptions = {
-    src: self.randImage.src,
-    sx: 0,
-    sy: 0,
-    numCols: self.randImage.numCols,
-    ticksPerFrame: self.randImage.ticksPerFrame,
-    ticks: 0
-  }
-  self.dying = false
-  self.respawnTime = 3000
-  self.canshoot = true
-  self.firerate = 200
-  self.angle = 0
-  self.speed = {x: 0, y: 0}
-  self.maxSpeed = 4
-  self.keys = {
-    up: false,
-    right: false,
-    down: false,
-    left: false,
-    space: false
-  }
-  self.pack = {}
+class Tank {
+	static explosion = {
+		src: env.host + '/images/explosion.png',
+		width: 147/3,
+		height: 45,
+		numCols: 3,
+		ticksPerFrame: 5
+	}
+	static images = [
+		{
+			src: env.host + "/images/green.png",
+			width: 266/8,
+			height: 40,
+			numCols: 8,
+			ticksPerFrame: 4
+		},
+		{
+			src: env.host + "/images/blue.png",
+			width: 278/8,
+			height: 40,
+			numCols: 8,
+			ticksPerFrame: 4
+		},
+		{
+			src: env.host + "/images/orange.png",
+			width: 266/8,
+			height: 40,
+			numCols: 8,
+			ticksPerFrame: 4
+		},
+		{
+			src: env.host + "/images/yellow.png",
+			width: 278/8,
+			height: 40,
+			numCols: 8,
+			ticksPerFrame: 4
+		},
+	]
+	constructor(id) {
+		this.id = id
+		this.randImage = Funcs.randElement(Tank.images)
+		this.dimensions = {
+			width: this.randImage.width,
+			height: this.randImage.height
+		}
+		this.position = {
+			x: Global.canvas.width / 2 - this.dimensions.width / 2,
+			y: Global.canvas.height / 2 - this.dimensions.height / 2
+		}
+		this.collider = {
+			tl: {
+				x: this.position.x,
+				y: this.position.y
+			},
+			tr: {
+				x: this.position.x + this.dimensions.width,
+				y: this.position.y
+			},
+			bl: {
+				x: this.position.x,
+				y: this.position.y + this.dimensions.height
+			},
+			br: {
+				x: this.position.x + this.dimensions.width,
+				y: this.position.y + this.dimensions.height
+			}
+		}
+		this.imageOptions = {
+			src: this.randImage.src,
+			sx: 0,
+			sy: 0,
+			numCols: this.randImage.numCols,
+			ticksPerFrame: this.randImage.ticksPerFrame,
+			ticks: 0
+		}
+		this.dying = false
+		this.respawnTime = 3000
+		this.canshoot = true
+		this.firerate = 200
+		this.angle = 0
+		this.speed = {x: 0, y: 0}
+		this.maxSpeed = 4
+		this.keys = {
+			up: false,
+			right: false,
+			down: false,
+			left: false,
+			space: false
+		}
+		this.pack = {}
+	}
+	update() {
+		if (this.dying) {
+			this.renderSpriteDie()
+		} else {
+			this.updatePosition()
+			this.updateDirection()
+			this.updateCollider()
+			this.renderSpriteMove()
+			this.detectCollision()
+			this.shoot()
+		}
+		this.updatePack()
+	}
+	onkeydown(data) {
+		switch (data) {
+			case "up":
+				this.keys.up = true
+				break
+			case "right":
+				this.keys.right = true
+				break
+			case "down":
+				this.keys.down = true
+				break
+			case "left":
+				this.keys.left = true
+				break
+			case "space":
+				this.keys.space = true
+		}
+	}
+	onkeyup(data) {
+		switch (data) {
+			case "up":
+				this.keys.up = false
+				break
+			case "right":
+				this.keys.right = false
+				break
+			case "down":
+				this.keys.down = false
+				break
+			case "left":
+				this.keys.left = false
+				break
+			case "space":
+				this.keys.space = false
+		}
+	}
+	updatePosition() {
+		this.speed.x = 0
+		this.speed.y = 0
+		let maxSpeed = this.maxSpeed
+		if (
+			(this.keys.up && this.keys.left) ||
+			(this.keys.up && this.keys.right) ||
+			(this.keys.down && this.keys.left) ||
+			(this.keys.down && this.keys.right)
+			)
+			maxSpeed /= Math.sqrt(2)
+		if (this.keys.up && this.keys.down) {
+			this.speed.y = 0
+		} else {
+			if (this.keys.up) {
+				this.speed.y = -maxSpeed
+			}
+			if (this.keys.down) {
+				this.speed.y = maxSpeed
+			}
+		}
+		if (this.keys.left && this.keys.right) {
+			this.speed.x = 0
+		} else {
+			if (this.keys.left) {
+				this.speed.x = -maxSpeed
+			}
+			if (this.keys.right) {
+				this.speed.x = maxSpeed
+			}
+		}
+		this.position.x += this.speed.x
+		this.position.y += this.speed.y
+	}
+	detectCollision() {
+		if (this.position.x <= 0) {
+			this.speed.x = 0
+			this.position.x = 0
+		} else if (this.position.x >= Global.canvas.width - this.dimensions.width) {
+			this.speed.x = 0
+			this.position.x = Global.canvas.width - this.dimensions.width
+		}
+		if (this.position.y <= 0) {
+			this.speed.y = 0
+			this.position.y = 0
+		} else if (this.position.y >= Global.canvas.height - this.dimensions.height) {
+			this.speed.y = 0
+			this.position.y = Global.canvas.height - this.dimensions.height
+		}
+		
+		for (let i in Global.OBSTACLE_LIST) {
+			let obstacle = Global.OBSTACLE_LIST[i]
+			if (obstacle instanceof Tank || obstacle instanceof Tile) {
+				let tank = obstacle
+				if (tank.id == this.id)
+					continue
+				let rectangleArea = Funcs.distance(tank.collider.tr, tank.collider.tl) * Funcs.distance(tank.collider.bl, tank.collider.tl)
+				let trianglesArea1 = 0
+				trianglesArea1 += Funcs.areaTriangle(this.collider.bl, tank.collider.tl, tank.collider.tr)
+				trianglesArea1 += Funcs.areaTriangle(this.collider.bl, tank.collider.tl, tank.collider.bl)
+				trianglesArea1 += Funcs.areaTriangle(this.collider.bl, tank.collider.br, tank.collider.tr)
+				trianglesArea1 += Funcs.areaTriangle(this.collider.bl, tank.collider.br, tank.collider.bl)
+				let trianglesArea2 = 0
+				trianglesArea2 += Funcs.areaTriangle(this.collider.br, tank.collider.tl, tank.collider.tr)
+				trianglesArea2 += Funcs.areaTriangle(this.collider.br, tank.collider.tl, tank.collider.bl)
+				trianglesArea2 += Funcs.areaTriangle(this.collider.br, tank.collider.br, tank.collider.tr)
+				trianglesArea2 += Funcs.areaTriangle(this.collider.br, tank.collider.br, tank.collider.bl)
+				if (Math.round(trianglesArea1) == rectangleArea || Math.round(trianglesArea2) == rectangleArea) {
+					this.position.x -= this.speed.x
+					this.position.y -= this.speed.y
+				}
+			} else if (obstacle instanceof Bullet) {
+				let bullet = obstacle
+				if (bullet.tank_id == this.id)
+					continue
+				let rectangleArea = Funcs.distance(this.collider.tr, this.collider.tl) * Funcs.distance(this.collider.bl, this.collider.tl)
+				let trianglesArea1 = 0
+				trianglesArea1 += Funcs.areaTriangle(bullet.collider.bl, this.collider.tl, this.collider.tr)
+				trianglesArea1 += Funcs.areaTriangle(bullet.collider.bl, this.collider.tl, this.collider.bl)
+				trianglesArea1 += Funcs.areaTriangle(bullet.collider.bl, this.collider.br, this.collider.tr)
+				trianglesArea1 += Funcs.areaTriangle(bullet.collider.bl, this.collider.br, this.collider.bl)
+				let trianglesArea2 = 0
+				trianglesArea2 += Funcs.areaTriangle(bullet.collider.br, this.collider.tl, this.collider.tr)
+				trianglesArea2 += Funcs.areaTriangle(bullet.collider.br, this.collider.tl, this.collider.bl)
+				trianglesArea2 += Funcs.areaTriangle(bullet.collider.br, this.collider.br, this.collider.tr)
+				trianglesArea2 += Funcs.areaTriangle(bullet.collider.br, this.collider.br, this.collider.bl)
+				if (Math.round(trianglesArea1) == rectangleArea || Math.round(trianglesArea2) == rectangleArea) {
+					this.die()
+					delete Global.OBSTACLE_LIST[bullet.id]
+					delete Global.BULLET_LIST[bullet.id]
+				}
+			}
+		}
+	}
+	updateDirection() {
+		let up = this.keys.up
+		let down = this.keys.down
+		let left = this.keys.left
+		let right = this.keys.right
+		if (left && right && down)
+			this.angle = 180
+		else if (left && right && up)
+			this.angle = 0
+		else if (up && down && right)
+			this.angle = 90
+		else if (up && down && left)
+			this.angle = 270
+		else if (up && right)
+			this.angle = 45 * 2 / 2
+		else if (up && left)
+			this.angle = 45 * 14 / 2
+		else if (down && right)
+			this.angle = 45 * 6 / 2
+		else if (down && left)
+			this.angle = 45 * 10 / 2
+		else if (left)
+			this.angle = 270
+		else if (right)
+			this.angle = 90
+		else if (up)
+			this.angle = 0
+		else if (down)
+			this.angle = 180
+	}
+	renderSpriteMove() {
+		if (this.speed.x || this.speed.y) {
+			if (this.imageOptions.sx + this.dimensions.width < this.dimensions.width * this.imageOptions.numCols) {
+				if (this.imageOptions.ticks >= this.imageOptions.ticksPerFrame) {
+					this.imageOptions.sx += this.dimensions.width
+					this.imageOptions.ticks = 0
+				} else {
+					this.imageOptions.ticks++
+				}
+			} else {
+				this.imageOptions.sx = 0
+			}
+		}
+	}
+	updateCollider() {
+		let diagonal = Math.sqrt(this.dimensions.width * this.dimensions.width + this.dimensions.height * this.dimensions.height)
+		let side = diagonal / 2
+		let base = this.dimensions.width
+		// Half the Small Angle Made by Rectangle Diagonals
+		let angle = 180 * Math.asin((base / 2) / side) / Math.PI
+		let vectorTopRight = this.angle + 90 - angle
+		let vectorTopLeft = this.angle + 90 + angle
+		while (vectorTopLeft > 360)
+			vectorTopLeft -= 360
+		while (vectorTopRight > 360)
+			vectorTopRight -= 360
+		let center = {
+			x: this.position.x + this.dimensions.width / 2,
+			y: this.position.y + this.dimensions.height / 2
+		}
+		this.collider.tl = {
+			x: center.x + Math.cos(vectorTopLeft * Math.PI / 180) * side,
+			y: center.y + Math.sin(vectorTopLeft * Math.PI / 180) * side
+		}
+		this.collider.tr = {
+			x: center.x + Math.cos(vectorTopRight * Math.PI / 180) * side,
+			y: center.y + Math.sin(vectorTopRight * Math.PI / 180) * side
+		}
+		this.collider.bl = {
+			x: center.x + Math.cos((vectorTopRight + 180) * Math.PI / 180) * side,
+			y: center.y + Math.sin((vectorTopRight + 180) * Math.PI / 180) * side
+		}
+		this.collider.br = {
+			x: center.x + Math.cos((vectorTopLeft + 180) * Math.PI / 180) * side,
+			y: center.y + Math.sin((vectorTopLeft + 180) * Math.PI / 180) * side
+		}
+	}
+	shoot() {
+		if (!this.canshoot || !this.keys.space)
+			return
+		this.canshoot = false
+		let bullet = new Bullet(
+			this.id + Date.now(),
+			this.id,
+			{
+				width: this.dimensions.width,
+				height: this.dimensions.height,
+			},
+			{
+				x: this.position.x + this.dimensions.width / 2,
+				y: this.position.y + this.dimensions.height / 2
+			},
+			this.angle
+		)
+		Global.OBSTACLE_LIST[bullet.id] = bullet
+		Global.BULLET_LIST[bullet.id] = bullet
+		setTimeout(() => {
+			this.canshoot = true
+		}, this.firerate)
+	}
+	die() {
+		this.imageOptions.src = Tank.explosion.src
+		this.imageOptions.numCols = Tank.explosion.numCols
+		this.imageOptions.ticksPerFrame = Tank.explosion.ticksPerFrame
+		this.dimensions.width = Tank.explosion.width
+		this.dimensions.height = Tank.explosion.height
+		this.imageOptions.ticks = 0
+		this.imageOptions.sx = 0
+		this.position.x = this.position.x + this.randImage.width / 2 - this.dimensions.width / 2
+		this.position.y = this.position.y + this.randImage.height / 2 - this.dimensions.height / 2
+		this.dying = true
+	}
+	renderSpriteDie() {
+		if (this.imageOptions.sx + this.dimensions.width < this.dimensions.width * this.imageOptions.numCols) {
+			if (this.imageOptions.ticks >= this.imageOptions.ticksPerFrame) {
+				this.imageOptions.sx += this.dimensions.width
+				this.imageOptions.ticks = 0
+			} else {
+				this.imageOptions.ticks++
+			}
+		} else {
+			this.imageOptions.src = ''
+			this.dimensions.width = 0
+			this.dimensions.height = 0
+			setTimeout(() => {
+				this.dying = false
+				this.reset()
+			}, this.respawnTime)
+		}
+	}
+	reset() {
+		this.keys.up = false
+		this.keys.right = false
+		this.keys.down = false
+		this.keys.left = false
+		this.position.x = Global.canvas.width / 2 - this.randImage.width / 2,
+		this.position.y = Global.canvas.height / 2 - this.randImage.height / 2
+		this.speed.x = 0
+		this.speed.y = 0
+		this.angle = 0
 
-  self.update = function() {
-    if (self.dying) {
-      self.renderSpriteDie()
-    } else {
-      self.updatePosition()
-      self.updateDirection()
-      self.updateCollider()
-      self.renderSpriteMove()
-      self.detectCollision()
-      self.shoot()
-    }
-    self.updatePack()
-  }
-  
-  self.onkeydown = function(data) {
-    switch (data) {
-      case 'up':
-        self.keys.up = true
-        break
-      case 'right':
-        self.keys.right = true
-        break
-      case 'down':
-        self.keys.down = true
-        break
-      case 'left':
-        self.keys.left = true
-        break
-      case 'space':
-        self.keys.space = true
-    }
-  }
-
-  self.onkeyup = function(data) {
-    switch (data) {
-      case 'up':
-        self.keys.up = false
-        break
-      case 'right':
-        self.keys.right = false
-        break
-      case 'down':
-        self.keys.down = false
-        break
-      case 'left':
-        self.keys.left = false
-        break
-      case 'space':
-        self.keys.space = false
-    }
-  }
-
-  self.updatePosition = function() {
-    self.speed.x = 0
-    self.speed.y = 0
-    let maxSpeed = self.maxSpeed
-    if (
-      (self.keys.up && self.keys.left) ||
-      (self.keys.up && self.keys.right) ||
-      (self.keys.down && self.keys.left) ||
-      (self.keys.down && self.keys.right)
-      )
-      maxSpeed /= Math.sqrt(2)
-    if (self.keys.up && self.keys.down) {
-      self.speed.y = 0
-    } else {
-      if (self.keys.up) {
-        self.speed.y = -maxSpeed
-      }
-      if (self.keys.down) {
-        self.speed.y = maxSpeed
-      }
-    }
-    if (self.keys.left && self.keys.right) {
-      self.speed.x = 0
-    } else {
-      if (self.keys.left) {
-        self.speed.x = -maxSpeed
-      }
-      if (self.keys.right) {
-        self.speed.x = maxSpeed
-      }
-    }
-    self.position.x += self.speed.x
-    self.position.y += self.speed.y
-  }
-
-  self.detectCollision = function() {
-    if (self.position.x <= 0) {
-      self.speed.x = 0
-      self.position.x = 0
-    } else if (self.position.x >= Global.canvas.width - self.dimensions.width) {
-      self.speed.x = 0
-      self.position.x = Global.canvas.width - self.dimensions.width
-    }
-    if (self.position.y <= 0) {
-      self.speed.y = 0
-      self.position.y = 0
-    } else if (self.position.y >= Global.canvas.height - self.dimensions.height) {
-      self.speed.y = 0
-      self.position.y = Global.canvas.height - self.dimensions.height
-    }
-    
-    for (let i in Global.OBSTACLE_LIST) {
-      let obstacle = Global.OBSTACLE_LIST[i]
-      if (obstacle instanceof Tank || obstacle instanceof Tile) {
-        let tank = obstacle
-        if (tank.id == self.id)
-          continue
-        let rectangleArea = Funcs.distance(tank.collider.tr, tank.collider.tl) * Funcs.distance(tank.collider.bl, tank.collider.tl)
-        let trianglesArea1 = 0
-        trianglesArea1 += Funcs.areaTriangle(self.collider.bl, tank.collider.tl, tank.collider.tr)
-        trianglesArea1 += Funcs.areaTriangle(self.collider.bl, tank.collider.tl, tank.collider.bl)
-        trianglesArea1 += Funcs.areaTriangle(self.collider.bl, tank.collider.br, tank.collider.tr)
-        trianglesArea1 += Funcs.areaTriangle(self.collider.bl, tank.collider.br, tank.collider.bl)
-        let trianglesArea2 = 0
-        trianglesArea2 += Funcs.areaTriangle(self.collider.br, tank.collider.tl, tank.collider.tr)
-        trianglesArea2 += Funcs.areaTriangle(self.collider.br, tank.collider.tl, tank.collider.bl)
-        trianglesArea2 += Funcs.areaTriangle(self.collider.br, tank.collider.br, tank.collider.tr)
-        trianglesArea2 += Funcs.areaTriangle(self.collider.br, tank.collider.br, tank.collider.bl)
-        if (Math.round(trianglesArea1) == rectangleArea || Math.round(trianglesArea2) == rectangleArea) {
-          self.position.x -= self.speed.x
-          self.position.y -= self.speed.y
-        }
-      } else if (obstacle instanceof Bullet) {
-        let bullet = obstacle
-        if (bullet.tank_id == self.id)
-          continue
-        let rectangleArea = Funcs.distance(self.collider.tr, self.collider.tl) * Funcs.distance(self.collider.bl, self.collider.tl)
-        let trianglesArea1 = 0
-        trianglesArea1 += Funcs.areaTriangle(bullet.collider.bl, self.collider.tl, self.collider.tr)
-        trianglesArea1 += Funcs.areaTriangle(bullet.collider.bl, self.collider.tl, self.collider.bl)
-        trianglesArea1 += Funcs.areaTriangle(bullet.collider.bl, self.collider.br, self.collider.tr)
-        trianglesArea1 += Funcs.areaTriangle(bullet.collider.bl, self.collider.br, self.collider.bl)
-        let trianglesArea2 = 0
-        trianglesArea2 += Funcs.areaTriangle(bullet.collider.br, self.collider.tl, self.collider.tr)
-        trianglesArea2 += Funcs.areaTriangle(bullet.collider.br, self.collider.tl, self.collider.bl)
-        trianglesArea2 += Funcs.areaTriangle(bullet.collider.br, self.collider.br, self.collider.tr)
-        trianglesArea2 += Funcs.areaTriangle(bullet.collider.br, self.collider.br, self.collider.bl)
-        if (Math.round(trianglesArea1) == rectangleArea || Math.round(trianglesArea2) == rectangleArea) {
-          self.die()
-          delete Global.OBSTACLE_LIST[bullet.id]
-          delete Global.BULLET_LIST[bullet.id]
-        }
-      }
-    }
-  }
-
-  self.updateDirection = function() {
-    let up = self.keys.up
-    let down = self.keys.down
-    let left = self.keys.left
-    let right = self.keys.right
-    if (left && right && down)
-      self.angle = 180
-    else if (left && right && up)
-      self.angle = 0
-    else if (up && down && right)
-      self.angle = 90
-    else if (up && down && left)
-      self.angle = 270
-    else if (up && right)
-      self.angle = 45 * 2 / 2
-    else if (up && left)
-      self.angle = 45 * 14 / 2
-    else if (down && right)
-      self.angle = 45 * 6 / 2
-    else if (down && left)
-      self.angle = 45 * 10 / 2
-    else if (left)
-      self.angle = 270
-    else if (right)
-      self.angle = 90
-    else if (up)
-      self.angle = 0
-    else if (down)
-      self.angle = 180
-  }
-
-  self.renderSpriteMove = function() {
-    if (self.speed.x || self.speed.y) {
-      if (self.imageOptions.sx + self.dimensions.width < self.dimensions.width * self.imageOptions.numCols) {
-        if (self.imageOptions.ticks >= self.imageOptions.ticksPerFrame) {
-          self.imageOptions.sx += self.dimensions.width
-          self.imageOptions.ticks = 0
-        } else {
-          self.imageOptions.ticks++
-        }
-      } else {
-        self.imageOptions.sx = 0
-      }
-    }
-  }
-
-  self.updateCollider = function() {
-    let diagonal = Math.sqrt(self.dimensions.width * self.dimensions.width + self.dimensions.height * self.dimensions.height)
-    let side = diagonal / 2
-    let base = self.dimensions.width
-    // Half the Small Angle Made by Rectangle Diagonals
-    let angle = 180 * Math.asin((base / 2) / side) / Math.PI
-    let vectorTopRight = self.angle + 90 - angle
-    let vectorTopLeft = self.angle + 90 + angle
-    while (vectorTopLeft > 360)
-      vectorTopLeft -= 360
-    while (vectorTopRight > 360)
-      vectorTopRight -= 360
-    let center = {
-      x: self.position.x + self.dimensions.width / 2,
-      y: self.position.y + self.dimensions.height / 2
-    }
-    self.collider.tl = {
-      x: center.x + Math.cos(vectorTopLeft * Math.PI / 180) * side,
-      y: center.y + Math.sin(vectorTopLeft * Math.PI / 180) * side
-    }
-    self.collider.tr = {
-      x: center.x + Math.cos(vectorTopRight * Math.PI / 180) * side,
-      y: center.y + Math.sin(vectorTopRight * Math.PI / 180) * side
-    }
-    self.collider.bl = {
-      x: center.x + Math.cos((vectorTopRight + 180) * Math.PI / 180) * side,
-      y: center.y + Math.sin((vectorTopRight + 180) * Math.PI / 180) * side
-    }
-    self.collider.br = {
-      x: center.x + Math.cos((vectorTopLeft + 180) * Math.PI / 180) * side,
-      y: center.y + Math.sin((vectorTopLeft + 180) * Math.PI / 180) * side
-    }
-  }
-
-  self.shoot = function() {
-    if (!self.canshoot || !self.keys.space)
-      return
-    self.canshoot = false
-    let bullet = new Bullet(
-      self.id + Date.now(),
-      self.id,
-      {
-        width: self.dimensions.width,
-        height: self.dimensions.height,
-      },
-      {
-        x: self.position.x + self.dimensions.width / 2,
-        y: self.position.y + self.dimensions.height / 2
-      },
-      self.angle
-    )
-    Global.OBSTACLE_LIST[bullet.id] = bullet
-    Global.BULLET_LIST[bullet.id] = bullet
-    setTimeout(function() {
-      self.canshoot = true
-    }, self.firerate)
-  }
-
-  self.die = function() {
-    self.imageOptions.src = Tank.explosion.src
-    self.imageOptions.numCols = Tank.explosion.numCols
-    self.imageOptions.ticksPerFrame = Tank.explosion.ticksPerFrame
-    self.dimensions.width = Tank.explosion.width
-    self.dimensions.height = Tank.explosion.height
-    self.imageOptions.ticks = 0
-    self.imageOptions.sx = 0
-    self.position.x = self.position.x + self.randImage.width / 2 - self.dimensions.width / 2
-    self.position.y = self.position.y + self.randImage.height / 2 - self.dimensions.height / 2
-    self.dying = true
-  }
-
-  self.renderSpriteDie = function() {
-    if (self.imageOptions.sx + self.dimensions.width < self.dimensions.width * self.imageOptions.numCols) {
-      if (self.imageOptions.ticks >= self.imageOptions.ticksPerFrame) {
-        self.imageOptions.sx += self.dimensions.width
-        self.imageOptions.ticks = 0
-      } else {
-        self.imageOptions.ticks++
-      }
-    } else {
-      self.imageOptions.src = ''
-      self.dimensions.width = 0
-      self.dimensions.height = 0
-      setTimeout(function() {
-        self.dying = false
-        self.reset()
-      }, self.respawnTime)
-    }
-  }
-
-  self.reset = function() {
-    self.keys.up = false
-    self.keys.right = false
-    self.keys.down = false
-    self.keys.left = false
-    self.position.x = Global.canvas.width / 2 - self.randImage.width / 2,
-    self.position.y = Global.canvas.height / 2 - self.randImage.height / 2
-    self.speed.x = 0
-    self.speed.y = 0
-    self.angle = 0
-
-    self.dimensions.width = self.randImage.width
-    self.dimensions.height = self.randImage.height
-    self.imageOptions.src = self.randImage.src
-    self.imageOptions.sx = 0
-    self.imageOptions.sy = 0
-    self.imageOptions.numCols = self.randImage.numCols
-    self.imageOptions.ticksPerFrame = self.randImage.ticksPerFrame
-    self.imageOptions.ticks = 0
-  }
-
-  self.updatePack = function() {
-    self.pack = {
-      id: self.id,
-      position: self.position,
-      dimensions: self.dimensions,
-      imageOptions:  {
-        src: self.imageOptions.src,
-        sx: self.imageOptions.sx,
-        sy: self.imageOptions.sy
-      },
-      angle: self.angle,
-      collider: self.collider
-    }
-  }
-
-  return self
+		this.dimensions.width = this.randImage.width
+		this.dimensions.height = this.randImage.height
+		this.imageOptions.src = this.randImage.src
+		this.imageOptions.sx = 0
+		this.imageOptions.sy = 0
+		this.imageOptions.numCols = this.randImage.numCols
+		this.imageOptions.ticksPerFrame = this.randImage.ticksPerFrame
+		this.imageOptions.ticks = 0
+	}
+	updatePack() {
+		this.pack = {
+			id: this.id,
+			position: this.position,
+			dimensions: this.dimensions,
+			imageOptions:	{
+				src: this.imageOptions.src,
+				sx: this.imageOptions.sx,
+				sy: this.imageOptions.sy
+			},
+			angle: this.angle,
+			collider: this.collider
+		}
+	}
 }
 
-Tank.explosion = {
-  src: env.host + '/images/explosion.png',
-  width: 147/3,
-  height: 45,
-  numCols: 3,
-  ticksPerFrame: 5
-}
-
-Tank.images = [
-  {
-    src: env.host + "/images/green.png",
-    width: 266/8,
-    height: 40,
-    numCols: 8,
-    ticksPerFrame: 4
-  },
-  {
-    src: env.host + "/images/blue.png",
-    width: 278/8,
-    height: 40,
-    numCols: 8,
-    ticksPerFrame: 4
-  },
-  {
-    src: env.host + "/images/orange.png",
-    width: 266/8,
-    height: 40,
-    numCols: 8,
-    ticksPerFrame: 4
-  },
-  {
-    src: env.host + "/images/yellow.png",
-    width: 278/8,
-    height: 40,
-    numCols: 8,
-    ticksPerFrame: 4
-  },
-]
-
-export default Tank
+module.exports = Tank

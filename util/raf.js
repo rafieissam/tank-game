@@ -28,4 +28,4 @@ let raf = {};
             clearTimeout(id);
         };
 }());
-export default raf;
+module.exports = raf;
