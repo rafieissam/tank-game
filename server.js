@@ -33,9 +33,9 @@ io.on("connection", function(socket) {
 	
 	// Emit
 	socket.emit("canvasSize", Global.canvas)
-	// if (Object.keys(Global.TILE_LIST).length < 1)
-	// 	Tile.genMap()
-	// socket.emit("tileMap", Tile.genpacks())
+	if (Object.keys(Global.TILE_LIST).length < 1)
+		Tile.genMap()
+	socket.emit("tileMap", Tile.genpacks())
 
 	// Events
 	socket.on("genMap", function() {

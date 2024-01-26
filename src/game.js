@@ -32,7 +32,7 @@ socket.on("pack", function(data) {
         );
         
         // Draw Collider
-        let drawCollider = false
+        let drawCollider = false;
         if (drawCollider) {
             ctx.beginPath();
             ctx.lineWidth = "3";
@@ -96,7 +96,7 @@ socket.on("pack", function(data) {
         ctx.restore();
         
         // Draw Collider
-        let drawCollider = true
+        let drawCollider = false;
         if (drawCollider) {
             ctx.beginPath();
             ctx.lineWidth = "3";
@@ -151,7 +151,7 @@ socket.on("pack", function(data) {
             height
         );
         
-        let drawCollider = true
+        let drawCollider = false;
         if (drawCollider) {
             ctx.beginPath();
             ctx.lineWidth = "3";
